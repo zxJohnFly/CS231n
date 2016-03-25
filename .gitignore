@@ -45,3 +45,8 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+*.ipynb
+*.pyc
+assignment1/frameworkpython
+*.txt
+assignment1/README.md
