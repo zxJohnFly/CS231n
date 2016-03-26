@@ -47,6 +47,7 @@ Temporary Items
 .apdisk
 *.ipynb
 *.pyc
+.idea
 assignment1/frameworkpython
 *.txt
 assignment1/README.md

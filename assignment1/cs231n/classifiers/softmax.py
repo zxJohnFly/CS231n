@@ -21,7 +21,7 @@ def softmax_loss_naive(W, X, y, reg):
   """
   # Initialize the loss and gradient to zero.
   loss = 0.0
-  dW = np.zeros_like(W)
+  dW = np.zeros_like(W.T)
 
   #############################################################################
   # TODO: Compute the softmax loss and its gradient using explicit loops.     #
@@ -29,7 +29,23 @@ def softmax_loss_naive(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_train, num_dim = X.shape
+
+  for i in xrange(num_train):
+    scores = X[i,:].dot(W)
+    scores -= np.max(scores)
+    scores = np.exp(scores)
+    loss += -np.log(scores[y[i]] / np.sum(scores))
+    
+    dW[y[i], :] -= X[i,:]
+    dW += scores.reshape(W.shape[1],1).dot(X[i, :].reshape(1, num_dim))/np.sum(scores)
+
+  loss /= num_train
+  dW /= num_train
+
+  loss += 0.5 * reg * np.sum(W * W)
+  dW = dW.T
+  dW += reg * W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
@@ -53,7 +69,24 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_train = X.shape[0]
+
+  scores = X.dot(W)
+  scores_exp = np.exp(scores.T - np.max(scores, axis=1))
+  loss = np.sum( -np.log(scores_exp[y,np.arange(num_train)]/np.sum(scores_exp, axis=0)))
+
+  scores_exp = scores_exp / np.sum(scores_exp, axis=0)
+  scores_exp[y,np.arange(num_train)] -= 1
+  dW = scores_exp.dot(X)
+
+  loss /= num_train
+  dW /= num_train
+  dW = dW.T
+
+  loss += 0.5 * reg * np.sum(W * W)
+  dW += reg * W
+
+
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
