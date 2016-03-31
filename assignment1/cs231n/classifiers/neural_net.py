@@ -67,7 +67,6 @@ class TwoLayerNet(object):
     W2, b2 = self.params['W2'], self.params['b2']
     N, D = X.shape
 
-
     # Compute the forward pass
     scores = None
     #############################################################################
