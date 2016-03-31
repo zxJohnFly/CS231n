@@ -242,6 +242,7 @@ class FullyConnectedNet(object):
     # layer, etc.                                                              #
     ############################################################################
     caches = []
+    dropout_caches = []
 
     out = X
     for layer in xrange(self.num_layers - 1):
@@ -249,10 +250,14 @@ class FullyConnectedNet(object):
       b = self.params[layer*2 + 1]
 
       out, cache = affine_relu_forward(out, W, b)
-      caches.insert(0,cache)
+      caches.append(cache)
+
+      if self.use_dropout:
+        out, cache = dropout_forward(out, self.dropout_param)
+        dropout_caches.append(cache)
     
     scores, cache = affine_forward(out, self.params[self.num_layers*2 - 2], self.params[self.num_layers*2 - 1])
-    caches.insert(0,cache)
+    caches.append(cache)
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -279,18 +284,30 @@ class FullyConnectedNet(object):
 
     loss += 0.5*self.reg*np.sum([np.sum(self.params[2*layer]*self.params[2*layer]) for layer in xrange(self.num_layers)])
 
-    dx, dW, db = affine_backward(dx, caches[0])
+    dx, dW, db = affine_backward(dx, caches[-1])
     grads[self.num_layers*2 - 2] = dW + self.reg*self.params[self.num_layers*2 - 2]
     grads[self.num_layers*2 - 1] = db
     
-    num_layers = self.num_layers - 1
-    for cache in caches[1:]:
-      num_layers -= 1
 
-      dx, dW, db = affine_relu_backward(dx, cache)
+    for layer in range(self.num_layers-1, 0, -1):
+      if self.use_dropout:
+        dx = dropout_backward(dx, dropout_caches[layer - 1])
 
-      grads[num_layers*2]     = dW + self.reg*self.params[num_layers*2]
-      grads[num_layers*2 + 1] = db
+      dx, dW, db = affine_relu_backward(dx, caches[layer - 1])
+
+      grads[layer*2 - 2]     = dW + self.reg*self.params[layer*2 - 2]
+      grads[layer*2 - 1] = db
+    # num_layers = self.num_layers - 1
+    # for cache in caches[1:]:
+    #   if self.use_dropout:
+    #     dx = dropout_backward(dx, cache)
+
+    #   num_layers -= 1
+      
+    #   dx, dW, db = affine_relu_backward(dx, cache)
+
+    #   grads[num_layers*2]     = dW + self.reg*self.params[num_layers*2]
+    #   grads[num_layers*2 + 1] = db
 
     ############################################################################
     #                             END OF YOUR CODE                             #
