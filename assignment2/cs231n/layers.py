@@ -169,16 +169,16 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # the momentum variable to update the running mean and running variance,    #
     # storing your result in the running_mean and running_var variables.        #
     #############################################################################
-    sample_mean = np.mean(x)
+    sample_mean = np.mean(x, axis=0)
     sample_var = np.var(x, axis=0)
 
     running_mean = momentum * running_mean + (1 - momentum) * sample_mean
     running_var = momentum * running_var + (1 - momentum) * sample_var
 
-    x = (x - sample_mean)/np.sqrt(sample_var + eps)
-    out = x*gamma + beta
+    x_hat = (x - sample_mean)/np.sqrt(sample_var + eps)
+    out = x_hat*gamma + beta
 
-    cache = (sample_mean, sample_var + eps, gamma, x)
+    cache = (sample_mean, sample_var + eps, gamma, x_hat, x)
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -226,32 +226,30 @@ def batchnorm_backward(dout, cache):
   # TODO: Implement the backward pass for batch normalization. Store the      #
   # results in the dx, dgamma, and dbeta variables.                           #
   #############################################################################
-  nu, var, gamma, x = cache
-  N = x.shape[0]
+  nu, var, gamma, x_hat, x = cache
+  N = x_hat.shape[0]
   
   # derivative of dout w.r.t beta
   # sum^m_1(dout)
   dbeta = np.sum(dout, axis=0)
 
   # derivative of dout w.r.t gamma 
-  # sum^m_1(dout.*x_cap)
-  dgamma = np.sum(dout*x, axis=0)
+  # sum^m_1(dout.*x_hat)
+  dgamma = np.sum(dout*x_hat, axis=0)
 
-  # derivative of dout w.r.t x_cap
+  # derivative of dout w.r.t x_hat
   # dout.*gamma
-  dx_cap = dout*gamma
+  dx_hat = dout*gamma
 
-  # derivative of dout w.r.t var
-  # sum^_1(dx_cap.*(x_i - nu)*(-1/2).*(var + eps)^(-3/2))
-  dvar2 = np.sum(dx_cap*(nu - x)/2*(var**-1.5), axis=0)
-
-  # derivative of dout w.r.t nu
-  # sum^m_1(dx_cap.*(-1/sqrt(var + eps))) + dvar2.*sum^m_1(-2(x_i - nu))/m
-  dnu  = np.sum((-dx_cap/np.sqrt(var)), axis=0) + dvar2*np.sum(nu - x, axis = 0)*2/N
-  
   # derivative of dout w.r.t x
-  # dx_cap.*(1/sqrt(var + eps)) + dvar2.*(2(x - nu))/m + 1*dnu/m
-  dx = dx_cap/np.sqrt(var) + 2*(x - nu)*dvar2/N + np.tile(dnu,[N, 1])/N
+  dx_hat = dout * gamma
+
+  dvar = np.sum(dx_hat * (x-nu) * (-0.5) * var**(-1.5),axis=0)
+
+  dmean = np.sum(dx_hat*(-1/np.sqrt(var)),axis=0)+ dvar * np.sum(-2*(x-nu))/N
+
+  dx = dx_hat * (1/np.sqrt(var)) + dvar * (2 * (x-nu)/N) + dmean/N
+  
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -281,7 +279,15 @@ def batchnorm_backward_alt(dout, cache):
   # should be able to compute gradients with respect to the inputs in a       #
   # single statement; our implementation fits on a single 80-character line.  #
   #############################################################################
-  pass
+  nu, var, gamma, x_hat, x = cache
+  N = x.shape[0]
+
+  dbeta = np.sum(dout, axis=0)
+
+  dgamma = np.sum(dout*x_hat, axis=0)
+  
+  dx_hat = dout*gamma
+  dx =  dx_hat/np.sqrt(var) - np.sum(dx_hat, axis=0)/(N*np.sqrt(var)) - (x - nu)*np.sum(dx_hat*(x - nu), axis=0)/(N*var**1.5)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
